@@ -5,7 +5,7 @@ By Snoolie
 
 # Part 1: Introduction
 
-//explain some stuff, ex how theos is what we're be using but it's just a build system for our tweaks ex tools like dragonbuild exist and one can even make a tweak without using any build systems, logos being a pre-processor for objc, etc. this guide will also not only be creating demo tweaks, but also explain the process of how some actual tweaks work and re-goes through how they were made.
+//explain some stuff, ex how theos is what we're be using but it's just a build system for our tweaks ex tools like dragonbuild exist and one can even make a tweak without using any build systems, logos being a pre-processor for objc, etc. this guide will also not only be creating demo tweaks, but also explain the process of how some actual tweaks work and re-goes through how they were made. also touch on some useful resources too.
 
 
 # Part 2: Installing Theos
