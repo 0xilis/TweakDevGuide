@@ -5,7 +5,7 @@ By Snoolie
 
 # Part 1: Introduction
 
-//explain some stuff, ex how theos is what we're be using but it's just a build system for our tweaks ex tools like dragonbuild exist and one can even make a tweak without using any build systems, logos being a pre-processor for objc, etc
+//explain some stuff, ex how theos is what we're be using but it's just a build system for our tweaks ex tools like dragonbuild exist and one can even make a tweak without using any build systems, logos being a pre-processor for objc, etc. this guide will also not only be creating demo tweaks, but also explain the process of how some actual tweaks work and re-goes through how they were made.
 
 
 # Part 2: Installing Theos
@@ -99,5 +99,31 @@ You'll notice it outputted a deb file. What is it? Well, let's just use a standa
 
 //continue latr
 
+# Part 6: Explaining APT/dpkg (+Creating a Repo)
+
+# Part 7: Creating Pastcuts (1.0)
+
+# Part 8: Coding in Objective-C
+
+# Part 9: Creating Pastcuts (1.2)
+
+# Part 10: UIKit Basics
+
+# Part 11: Structure of the filesystem
+
+//maybe split into multiple parts
+//What's happening in our iPhone's terminal? - roughly touch the surface of binaries being in /usr/bin and /usr/local/bin and touch a little on sh
+
+# Part 12: ObjC-API
+
+# Part 13: Who needs Logos anyways?
+
+//explain TweakWithoutLogos and TweakWithoutTheos
+
+# Part 14: Finding Headers / Basic Reverse Engineering
+
+# Part 15: What's a bootstrap?
+
+//I'm prob never going to finish this lol
 
 Reminders: Part 2 Also bring up theos for jailbroken iOS, Part 3 check if $THEOS env var is auto done
