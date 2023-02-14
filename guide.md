@@ -162,7 +162,7 @@ Okay, so, what's wrong here? Well, in 1.2 I wanted Pastcuts to convert shortcut 
 I still wasn't that experienced with RE, but I had improved by Obj-C skills a bit by this point - instead of RE, I instead just plopped in a NSLog, looked at console, and saw how many times it was called and was like, "okay, this definitely is called too much". I still didn't know RE so I just messed with random classes Flex 3 showed, and found WFSharedShortcut. After trying an NSLog with a hook *this* time, I saw that it seems to not be called when loading shortcuts, only when importing. So I decided that WFSharedShortcut was a much better option for this than WFWorkflowRecord. Current Pastcuts, 1.3.0, still actually uses WFSharedShortcut, fun fact, and some other tweaks of mine such as Safecuts, which mitigates an iOS 15.0-15.3.1 hidden action vuln also use it (although I should really switch to using WFShortcutExporter for Safecuts - it's brand new to iOS 15, and if you're doing iOS 15, it's more better suited for this type of stuff). I would still recommend doing, uh, good RE and understanding exactly how WFSharedShortcut works, but at the time this was all I knew and I guess it's better than nothing.
 
 
-So, let's just switch to hooking (also in WorkflowKit) WFSharedShortcut's workflowRecord instead. Let's do id rettype = %orig;. Then, \[rettype setMinimumClientVersion:@"1"]; to make minimumClientVersion 1 in it. Then just return rettype, and boom, now we only hook when a shortcut is imported, making us MUCH more optimized! I was planning on waiting for Pastcuts 1.2, but I decided this optimization is enough to deserve a quick 1.1.2 release.
+So, let's just switch to hooking (also in WorkflowKit) WFSharedShortcut's workflowRecord instead. Let's do `id rettype = %orig;`, %orig will return what the getter method would have originall returned (aka the unmodified WFWorkflowRecord). Then, `[rettype setMinimumClientVersion:@"1"];` to set minimumClientVersion to be a NSString being @"1". Then just return rettype (our modified WFWorkflowRecord), and boom, now we only hook when a shortcut is imported, making us MUCH more optimized! I was planning on waiting for Pastcuts 1.2, but I decided this optimization is enough to deserve a quick 1.1.2 release.
 
 ```objc
 %hook WFSharedShortcut
@@ -265,6 +265,8 @@ int main(void) {
 
 Lemme explain:
 
+So, we have a class, OurOwnClass. Classes aren't objects. We are creating a new object, thisIsAnObject, that's type is OurOwnClass. In other words, we're creating an instance of our OurOwnClass class, and thisIsAnObject is a pointer to that.
+
 So, an instance variable, or ivar for short, are variables for our object thisIsAnObject, but are private to it - aka every object we make from OurOwnClass will have its own ourIvar.
 
 You'll see @property(nonatomic, readwrite) int ourProperty - this will autogen for us a setter (setOurProperty:), getter (ourProperty), and ivar (\_ourProperty) for ourProperty.
@@ -317,6 +319,8 @@ int main(void) {
 }
 ```
 
+This is... not really covering much. At all. Objecctive-C is an entire programming language and it's not like I can explain it all in a singular part of a tweak dev guide. For learning, I recommend other resourves specifically designed to teach ObjC, such as [Learn Objective-C in 24 Days](https://github.com/uroboro/Learn-Objective-C-in-24-Days-Clone). Maybe I might expand this section a bit to explain a bit more but I'll likely never get to a good full rundown to teach you the language, as sadly I do not have the time nor the patience to type an entire ObjC guide here, however there are a *lot* of resources to learn, like the resource I listed here.
+
 //finish latr
 
 # Part 9: Creating Pastcuts (1.2)
@@ -325,25 +329,105 @@ Okay, so we can import all Shortcuts imported now. I missed that gallery shortcu
 
 So first off I want to thank u/gluebyte for documenting some of the backwards (in)compatibility of iOS 15. See the post here https://www.reddit.com/r/shortcuts/comments/opak23/backward_incompatibility_of_ios_15_shortcuts/. Let's start by converting the stop action back to the exit action.
 
-We need to get the actions, obv. NSArray \*origShortcutActions = (NSArray \*)\[rettype actions];. I also create a mutable copy of the actions as newMutableShortcutActions. Then I proceed to have a for loop to loop through all the actions in origShortcutActions. Actions codewise are very similar to Shortcut's unsigned plist format, so if you're already aware of it this should be fairly easy to understand.
+We need to get the actions, obv. Here's WFSharedShortcut's header, which you can find here: [https://headers.cynder.me/index.php?sdk=ios/13.5&fw=/PrivateFrameworks/WorkflowKit.framework&file=Headers%2FWFSharedShortcut.h](https://headers.cynder.me/index.php?sdk=ios/13.5&fw=/PrivateFrameworks/WorkflowKit.framework&file=Headers%2FWFSharedShortcut.h):
 
-WFWorkflowActionIdentifier is a string representing the action'd id. To check if the action is a stop action, we just check if the action in the loop's WFWorkflowActionIdentifier is equal to string is.workflow.actions.output.
+```objc
+@interface WFSharedShortcut : NSObject <WFCloudKitItem, WFLoggableObject>
 
-If so, I create a mutable copy of the action to modify it. Then I change the WFWorkflowActionIdentifier to equal is.workflow.actions.exit. I then proceed to attempt to get its output and correspond to is.workflow.actions.exit's way.
 
-If you're unaware of how an action is structured, I really recommend creating a shortcut with the action, using the Get My Shortcuts action, Choose from List, and then get file of type com.apple.plist to view the shortcuts unsigned plist. It should give you a good look at how the action works without even needing to look at rev'ing WorkflowKit/ActionKit.
 
-(Note: That being said, when needed to, I highly recommend learning some basic reverse engineering. I made Pastcuts before I knew anything and just tried a bunch of classes hoping to eventually get it right. Don't do this. That's a ton more effort and rev'ing gives you a much better chance of ensuring what you're hooking is good to hook. I have since and it's been very helpful.)
+@property (readonly, nonatomic) NSDate *createdAt; // ivar: _createdAt
+@property (readonly, nonatomic) NSString *createdBy; // ivar: _createdBy
+@property (readonly, copy) NSString *debugDescription;
+@property (readonly, copy) NSString *description;
+@property (readonly) NSUInteger hash;
+@property (retain, nonatomic) WFWorkflowIcon *icon;
+@property (retain, nonatomic) NSNumber *iconColor; // ivar: _iconColor
+@property (retain, nonatomic) WFFileRepresentation *iconFile; // ivar: _iconFile
+@property (retain, nonatomic) NSNumber *iconGlyph; // ivar: _iconGlyph
+@property (readonly, nonatomic) CKRecordID *identifier; // ivar: _identifier
+@property (copy, nonatomic) NSString *name; // ivar: _name
+@property (readonly, nonatomic) NSDictionary *propertiesForEventLogging;
+@property (retain, nonatomic) WFFileRepresentation *shortcutFile; // ivar: _shortcutFile
+@property (readonly) Class superclass;
+@property (retain, nonatomic) WFWorkflowRecord *workflowRecord; // ivar: _workflowRecord
+
+
++(id)properties;
++(id)recordType;
+-(id)sharingURL;
+-(void)ensureFileAssets;
+-(void)setCreatedAt:(id)arg0 modifiedAt:(id)arg1 createdBy:(id)arg2 ;
+
+
+@end
+```
+
+The workflowRecord property is obviously going to hold a WFWorkflowRecord for the shortcut we're importing. Here is WFWorkflowRecord's header:
+
+```ojbc
+@interface WFWorkflowRecord : WFRecord <WFNaming>
+
+
+
+@property (copy, nonatomic) NSSet *accessResourcePerWorkflowStates; // ivar: _accessResourcePerWorkflowStates
+@property (copy, nonatomic) NSArray *actions; // ivar: _actions
+@property (copy, nonatomic) NSString *actionsDescription; // ivar: _actionsDescription
+@property (copy, nonatomic) NSString *associatedAppBundleIdentifier; // ivar: _associatedAppBundleIdentifier
+@property (nonatomic) NSUInteger cachedSyncHash; // ivar: _cachedSyncHash
+@property (readonly, nonatomic) BOOL conflictOfOtherWorkflow; // ivar: _conflictOfOtherWorkflow
+@property (retain, nonatomic) NSDate *creationDate; // ivar: _creationDate
+@property (readonly, nonatomic) NSUInteger estimatedSize; // ivar: _estimatedSize
+@property (copy, nonatomic) NSString *galleryIdentifier; // ivar: _galleryIdentifier
+@property (nonatomic) BOOL hiddenFromLibraryAndSync; // ivar: _hiddenFromLibraryAndSync
+@property (nonatomic) BOOL hiddenInComplication; // ivar: _hiddenInComplication
+@property (retain, nonatomic) WFWorkflowIcon *icon; // ivar: _icon
+@property (copy, nonatomic) NSArray *importQuestions; // ivar: _importQuestions
+@property (copy, nonatomic) NSArray *inputClasses; // ivar: _inputClasses
+@property (readonly, nonatomic) BOOL isDeleted; // ivar: _isDeleted
+@property (copy, nonatomic) NSString *lastMigratedClientVersion; // ivar: _lastMigratedClientVersion
+@property (copy, nonatomic) NSString *lastSavedOnDeviceName; // ivar: _lastSavedOnDeviceName
+@property (nonatomic) NSInteger lastSyncedHash; // ivar: _lastSyncedHash
+@property (copy, nonatomic) NSString *legacyName; // ivar: _legacyName
+@property (readonly, nonatomic) NSNumber *location; // ivar: _location
+@property (copy, nonatomic) NSString *minimumClientVersion; // ivar: _minimumClientVersion
+@property (retain, nonatomic) NSDate *modificationDate; // ivar: _modificationDate
+@property (copy, nonatomic) NSString *name; // ivar: _name
+@property (retain, nonatomic) WFWorkflowQuarantine *quarantine; // ivar: _quarantine
+@property (nonatomic) NSInteger remoteQuarantineStatus; // ivar: _remoteQuarantineStatus
+@property (copy, nonatomic) NSString *source; // ivar: _source
+@property (readonly, copy, nonatomic) NSString *wfName;
+@property (copy, nonatomic) NSString *workflowSubtitle; // ivar: _workflowSubtitle
+@property (copy, nonatomic) NSArray *workflowTypes; // ivar: _workflowTypes
+
+
++(id)defaultPropertyValues;
+-(BOOL)hiddenFromLibraryAndSync;
+-(BOOL)hiddenInComplication;
+-(BOOL)isDeleted;
+-(BOOL)isEquivalentForSyncTo:(id)arg0 ;
+-(BOOL)saveChangesToStorage:(id)arg0 error:(*id)arg1 ;
+-(NSUInteger)syncHash;
+-(id)fileRepresentation;
+
+
+@end
+```
+So it seems that actions is the property that contains our actions as an NSArray. `NSArray *origShortcutActions = (NSArray *)[rettype actions];`. I also create a mutable copy of the actions as newMutableShortcutActions so we can modify it. `NSMutableArray *newMutableShortcutActions = [origShortcutActions mutableCopy];` Then I proceed to have a for loop to loop through all the actions in origShortcutActions. Actions are NSDictionaries. A dictionary is basically an object that holds other objects as values, with keys for them - what I mean is, here I'm creating a NSDictionary containing two keys, Key1 and Key2, with Key1 being a NSString holding Value1, and Key2 being a NSString holding Value2: `NSDictionary *aDict = [[NSDictionary alloc]initWithObjectsAndKeys:@"Value2",@"Key2",@"Value1",@"Key1",nil];`. We can use `objectForKey:` to retrive the object for the key, ex, `NSLog(@"%@",[aDict objectForKey:@"Key2"])` will output Value2, the NSString value for the key Key2.
+
+The action NSDictionary holds some keys representing values for the actions. `WFWorkflowActionIdentifier` is a string representing the action'd id. To check if the action is a stop action, we just check if the action in the loop's `WFWorkflowActionIdentifier` is equal to string is.workflow.actions.output.
+
+If so, I create a mutable copy of the action to modify it. Then I change the `WFWorkflowActionIdentifier` to equal is.workflow.actions.exit. I then proceed to attempt to get its output and correspond to is.workflow.actions.exit's way. You don't need to understand how is.workflow.actions.exit works, what matters here in this guide is that you understand what objective-c code does.
 
 Here's an example of this:
 
 ```objc
 %hook WFSharedShortcut
 -(id)workflowRecord {
-  id rettype = %orig;
+  id rettype = %orig; //the original wfworkflowrecord that would have returned
   [rettype setMinimumClientVersion:@"1"];
   NSArray *origShortcutActions = (NSArray *)[rettype actions];
-  NSMutableArray *newMutableShortcutActions = [origShortcutActions mutableCopy];
+  NSMutableArray *newMutableShortcutActions = [origShortcutActions mutableCopy]; //what is going to be our new actions
   int shortcutActionsObjectIndex = 0;
   for (id shortcutActionsObject in origShortcutActions) {
     //this safety check is only needed if you are unaware of in actions it potentially contains more than NSDictionaries.
@@ -367,14 +451,52 @@ Here's an example of this:
       }
     }
   }
-  return rettype;
+  //newMutableShortcutActions holds our new modified actions now
+  [rettype setActions:newMutableShortcutActions]; //setting the wfworkflowrecord's actions to be ours
+  return rettype; //returning our modified wfworkflowrecord
 }
 %end
 ```
 
-# Part 10: UIKit Basics
+# Part 10: %ctor, %dtor, and %group
 
-# Part 11: Structure of the filesystem
+Let's say we want our tweak to run some code when starting up. %ctor and %dtor are ways to do that - they're similar, but the difference is that %ctor executes after the binary loads, and %dtor executes before. We also might want to group some of our hooks - %group is a way to do that.
+
+```
+%group MyGroupOfHookOrHooks
+%hook SomeClass
+-(void)aMethod {
+ NSLog(@"This method will only be hooked when anInt is 3!");
+}
+%end
+%end
+%hook AnotherClass
+-(void)aMethod {
+ NSLog(@"The hook for this method is ungrouped.");
+}
+%end
+%ctor {
+ NSLog(@"After binary loaded.");
+ int anInt = 2;
+ if (anInt == 3) { //anInt is 2, but if it were 3, the hooks in MyGroupOfHookOrHooks would be initialized.
+  %init(MyGroupOfHookOrHooks);
+ }
+ %init(_ungrouped); //initialize all ungrouped hooks
+}
+%dtor {
+ NSLog(@"Before binary loaded.");
+}
+```
+
+An example of when you're going to use constructors is say, if your tweak has preferences and you don't want something to be hooked if your user doesn't set something in their preferences.
+
+//explain some more logos stuff like hookf in other parts
+
+# Part 11: UIKit Basics
+
+//cover some basics of uikit here, show examples of gesture recognizers, adding subviews to uiviews, and presenting view controllers.  not gonna explain everything obv and explain why learning here prob won't do you much good but link to good resources
+
+# Part 12: Structure of the filesystem
 
 Let's get Filza or Santander, and go to our root directory, `/`.
 
@@ -393,19 +515,19 @@ Some important directories for SystemFS:
 //maybe split into multiple parts
 //What's happening in our iPhone's terminal? - roughly touch the surface of binaries being in /usr/bin and /usr/local/bin and touch a little on sh
 
-# Part 12: ObjC-API
+# Part 13: Substrate APIs and ObjC-API
 
 Ever wondered how Objective-C works behind the scenes?
 
 //finish latr
 
-# Part 13: Who needs Logos anyways?
+# Part 14: Who needs Logos anyways?
 
 //explain TweakWithoutLogos and TweakWithoutTheos
 
-# Part 14: Finding Headers / Basic Reverse Engineering
+# Part 15: Finding Headers / Basic Reverse Engineering
 
-# Part 15: What's a bootstrap?
+# Part 16: What's a bootstrap?
 
 //I'm prob never going to finish this lol
 
