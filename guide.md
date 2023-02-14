@@ -458,7 +458,7 @@ Here's an example of this:
 %end
 ```
 
-# Part 10: %ctor, %dtor, and %group
+# Part 10: More with Logos
 
 Let's say we want our tweak to run some code when starting up. %ctor and %dtor are ways to do that - they're similar, but the difference is that %ctor executes after the binary loads, and %dtor executes before. We also might want to group some of our hooks - %group is a way to do that.
 
@@ -490,7 +490,26 @@ Let's say we want our tweak to run some code when starting up. %ctor and %dtor a
 
 An example of when you're going to use constructors is say, if your tweak has preferences and you don't want something to be hooked if your user doesn't set something in their preferences.
 
-//explain some more logos stuff like hookf in other parts
+Want to add a method to an object? Use `%new`. Here I'm adding `customMethod` to AwesomeObject:
+
+```objc
+%hook AwesomeObject
+%new
+-(void)customMethod {
+ NSLog(@"The custom method of this awesome object has been called.");
+}
+%end
+```
+
+So we've been hooking Objective-C methods for all this time, but what if we need to hook a function? `%hookf` is for that. Let's imagine the process we're hooking into has a function called `int veryBoringFunction(char *aString)`. To make it always return 5 we can:
+
+```objc
+char *veryBoringFunction(char *aString);
+
+%hookf(int, veryBoringFunction, char *aString) {
+  return 5;
+}
+```
 
 # Part 11: UIKit Basics
 
