@@ -504,7 +504,7 @@ Want to add a method to an object? Use `%new`. Here I'm adding `customMethod` to
 So we've been hooking Objective-C methods for all this time, but what if we need to hook a function? `%hookf` is for that. Let's imagine the process we're hooking into has a function called `int veryBoringFunction(char *aString)`. To make it always return 5 we can:
 
 ```objc
-char *veryBoringFunction(char *aString);
+int veryBoringFunction(char *aString);
 
 %hookf(int, veryBoringFunction, char *aString) {
   return 5;
