@@ -196,13 +196,125 @@ int main(void) {
 }
 ```
 
-What are we passing into the NSLog function, `@"Hello World"` is a NSString object containing the text "Hello World". Now, here's an object:
+What are we passing into the NSLog function, `@"Hello World"` is a NSString object containing the text "Hello World". Now, here's a custom class:
 
 ```objc
-@interface
+@interface OurOwnClass : NSObject {
+ int ourIvar; //an instance variable
+}
+@property(nonatomic, readwrite) ourProperty;
+-(void)anInstanceMethod;
++(void)aStaticMethod;
 @end
-@implementation
+@implementation OurOwnClass
+-(void)anInstanceMethod {
+ if (ourIvar > 5) {
+  ourIvar += 1;
+  NSLog(@"Added 1 to ourIvar");
+ } else {
+  NSLog(@"ourIvar has not been initialized");
+ }
+}
++(void)aStaticMethod {
+ NSLog(@"This is our static method!");
+}
 @end
+```
+
+Here's us using the class in a program:
+
+```objc
+#include <Foundation.h>
+
+@interface OurOwnClass : NSObject {
+ int ourIvar; //an instance variable
+}
+@property(nonatomic, readwrite) int ourProperty;
+-(void)anInstanceMethod;
++(void)aStaticMethod;
+@end
+@implementation OurOwnClass
+-(void)anInstanceMethod {
+ if ([self ourProperty] == 5) {
+  ourIvar = 8;
+ }
+ if (ourIvar > 5) {
+  ourIvar += 1;
+  NSLog(@"Added 1 to ourIvar");
+ } else {
+  NSLog(@"ourIvar has not been initialized or is not greater than 5");
+ }
+}
++(void)aStaticMethod {
+ NSLog(@"This is our static method!");
+}
+@end
+
+int main(void) {
+ OurOwnClass *thisIsAnObject = [[OurOwnClass alloc]init];
+ [thisIsAnObject anInstanceMethod]; //this will output ourIvar has not been initialized or is not greater than 5
+ [thisIsAnObject setOurProperty:5]; //setting ourProperty to 5
+ [thisIsAnObject anInstanceMethod]; //since ourProperty is now 5, ourIvar will be set to 8, and it is greater than 5 so 1 will be added to ourIvar
+ NSLog(@"%d",[thisIsAnObject ourProperty]); //this will output 5, the current value of ourProperty
+ [thisIsAnObject setOurProperty:2]; //setting ourProperty to 2
+ [thisIsAnObject anInstanceMethod]; //ourProperty is no longer 5, so ourIvar won't be set to 8. however ourIvar is 6, so one will be added to it.
+ [OurOwnClass aStaticMethod]; //outputs This is our static method!
+ return 0;
+}
+```
+
+Lemme explain:
+
+So, an instance variable, or ivar for short, are variables for our object thisIsAnObject, but are private to it - aka every object we make from OurOwnClass will have its own ourIvar.
+
+You'll see @property(nonatomic, readwrite) int ourProperty - this will autogen for us a setter (setOurProperty:), getter (ourProperty), and ivar (\_ourProperty) for ourProperty.
+
+What's a setter/getter? Well, we may want to access the ivar's value and change it. Setters/getters do exactly that. A getter will be autogen'd for us if we don't declare our custom one. We aren't declaring this property as readonly, so a setter will also be autogen'd for us if we don't declare our custom one. Here's the same thing, but instead of @property(nonatomic, readwrite) int ourProperty do the work for us, we're using our own getter/setter for our ivar:
+
+```objc
+#include <Foundation.h>
+
+@interface OurOwnClass : NSObject {
+ int ourIvar; //an instance variable
+ int ourProperty;
+}
+-(void)anInstanceMethod;
++(void)aStaticMethod;
+@end
+@implementation OurOwnClass
+-(void)anInstanceMethod {
+ if ([self ourProperty] == 5) {
+  ourIvar = 8;
+ }
+ if (ourIvar > 5) {
+  ourIvar += 1;
+  NSLog(@"Added 1 to ourIvar");
+ } else {
+  NSLog(@"ourIvar has not been initialized or is not greater than 5");
+ }
+}
+-(int)ourProperty {
+ return ourProperty;
+}
+-(void)setOurProperty:(int)arg0 {
+ ourProperty = arg0;
+}
++(void)aStaticMethod {
+ NSLog(@"This is our static method!");
+}
+@end
+
+int main(void) {
+ OurOwnClass *thisIsAnObject = [[OurOwnClass alloc]init];
+ [thisIsAnObject anInstanceMethod]; //this will output ourIvar has not been initialized or is not greater than 5
+ [thisIsAnObject setOurProperty:5]; //setting ourProperty to 5
+ [thisIsAnObject anInstanceMethod]; //since ourProperty is now 5, ourIvar will be set to 8, and it is greater than 5 so 1 will be added to ourIvar
+ NSLog(@"%d",[thisIsAnObject ourProperty]); //this will output 5, the current value of ourProperty
+ [thisIsAnObject setOurProperty:2]; //setting ourProperty to 2
+ [thisIsAnObject anInstanceMethod]; //ourProperty is no longer 5, so ourIvar won't be set to 8. however ourIvar is 6, so one will be added to it.
+ [OurOwnClass aStaticMethod]; //outputs This is our static method!
+ return 0;
+}
 ```
 
 //finish latr
