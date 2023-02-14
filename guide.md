@@ -176,6 +176,37 @@ So, let's just switch to hooking (also in WorkflowKit) WFSharedShortcut's workfl
 
 # Part 8: Coding in Objective-C
 
+Here, a simple Hello World program in C:
+
+```c
+#include <stdio.h>
+
+int main(void) {
+ printf("Hello World\n");
+}
+```
+
+Here's that, but using NSLog instead from Objective C:
+
+```c
+#include <Foundation.h>
+
+int main(void) {
+ NSLog(@"Hello World");
+}
+```
+
+What are we passing into the NSLog function, `@"Hello World"` is a NSString object containing the text "Hello World". Now, here's an object:
+
+```objc
+@interface
+@end
+@implementation
+@end
+```
+
+//finish latr
+
 # Part 9: Creating Pastcuts (1.2)
 
 Okay, so we can import all Shortcuts imported now. I missed that gallery shortcuts won't be under WFSharedShortcut, so we should also do the same hook for WFGalleryShortcut's workflowRecord as well. Now, even though we can import any action, iOS 13/14 doesn't have every action iOS 15 does, does it? Let's fix that.
