@@ -233,6 +233,20 @@ Here's an example of this:
 
 # Part 11: Structure of the filesystem
 
+Let's get Filza or Santander, and go to our root directory, `/`.
+
+/var, which is a symlink to /private/var, is the userFS. Most things out of var are in the system partition.
+
+Some important directories for SystemFS:
+
+`/Applications` - System apps are stored here.
+
+`/usr/bin` and `/usr/local/bin` - holds core system binaries.
+
+`/usr/lib/TweakInject` - where dylibs and plists for our tweaks are stored are stored.
+
+//finish later
+
 //maybe split into multiple parts
 //What's happening in our iPhone's terminal? - roughly touch the surface of binaries being in /usr/bin and /usr/local/bin and touch a little on sh
 
