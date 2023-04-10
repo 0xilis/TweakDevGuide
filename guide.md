@@ -5,7 +5,7 @@ By Snoolie
 
 # Part 1: Introduction
 
-//explain some stuff, ex how theos is what we're be using but it's just a build system for our tweaks ex tools like dragonbuild exist and one can even make a tweak without using any build systems, logos being a pre-processor for objc, etc. this guide will also not only be creating demo tweaks, but also explain the process of how some actual tweaks work and re-goes through how they were made. also touch on some useful resources too.
+//explain some stuff, ex how theos is what we're be using but it's just a build system for our tweaks ex tools like dragonbuild exist and one can even make a tweak without using any build systems, logos being a pre-processor for objc, etc. this guide will also not only be creating demo tweaks, but also explain the process of how some actual tweaks work and re-goes through how they were made, providing helpful hands-on examples. also touch on some useful resources too.
 
 
 # Part 2: Installing Theos
@@ -82,7 +82,7 @@ This is the beginner, basic tweak that the majority of tweak development guides 
 
 So, what are we doing here?
 
-Well, SBDockView, SBFloatingDockView, and SBFloatingDockPlatterView are all objects. An object can hold methods (sort of like functions), as well as properties and ivars. SBDockView, SBFloatingDockView, and SBFloatingDockPlatterView are all UIViews for the dock - a UIView is an object from the UIKit framework that represents, well, views - ex a programmer may want to have a view displayed on their app that contains an image, so they may use UIImageView (a UIView) to show the image in. Now, UIViews have a property called `hidden` - which, well, obviously tell if the view is hidden or not. Objective-C, for that hidden property, will have a getter and setter methods for interacting with that property - ex, SBDockView's setHidden:(BOOL0 property will set the property to the argument passed into it, ex setHidden:YES will set the hidden property to YES. The getter method, -(BOOL)hidden (which we do not need to hook as we are already hooking the setter), will return the value of the hidden property. SBDockView(et. all) inherits from UIView, so SBDockView and the rest has this hidden property, and these methods which set and return the value of it. Here, we have `@interface SBDockView : UIView` and etc for all other views we're hooking, which tells theos, hey, SBDockView inherits from UIView. Here's our SBDockView hook again:
+Well, SBDockView, SBFloatingDockView, and SBFloatingDockPlatterView are all objects. An object can hold methods (sort of like functions), as well as properties and ivars. SBDockView, SBFloatingDockView, and SBFloatingDockPlatterView are all UIViews for the dock - a UIView is an object from the UIKit framework that represents, well, views - ex a programmer may want to have a view displayed on their app that contains an image, so they may use UIImageView (a UIView) to show the image in. Now, UIViews have a property called `hidden` - which, well, obviously tell if the view is hidden or not. Objective-C, for that hidden property, will have a getter and setter methods for interacting with that property - ex, SBDockView's setHidden:(BOOL) property will set the property to the argument passed into it, ex setHidden:YES will set the hidden property to YES. The getter method, -(BOOL)hidden (which we do not need to hook as we are already hooking the setter), will return the value of the hidden property. SBDockView(et. all) inherits from UIView, so SBDockView and the rest has this hidden property, and these methods which set and return the value of it. Here, we have `@interface SBDockView : UIView` and etc for all other views we're hooking, which tells theos, hey, SBDockView inherits from UIView. Here's our SBDockView hook again:
 
 ```objc
 %hook SBDockView
@@ -323,7 +323,11 @@ This is... not really covering much. At all. Objecctive-C is an entire programmi
 
 //finish latr
 
-# Part 9: Creating Pastcuts (1.2)
+# Part 9: Creating SnoolieBattery
+
+SnoolieBattery is a tweak that, much like all other battery percentage tweaks, 
+
+# Part 10: Creating Pastcuts (1.2)
 
 Okay, so we can import all Shortcuts imported now. I missed that gallery shortcuts won't be under WFSharedShortcut, so we should also do the same hook for WFGalleryShortcut's workflowRecord as well. Now, even though we can import any action, iOS 13/14 doesn't have every action iOS 15 does, does it? Let's fix that.
 
@@ -458,7 +462,7 @@ Here's an example of this:
 %end
 ```
 
-# Part 10: More with Logos
+# Part 11: More with Logos
 
 Let's say we want our tweak to run some code when starting up. %ctor and %dtor are ways to do that - they're similar, but the difference is that %ctor executes after the binary loads, and %dtor executes before. We also might want to group some of our hooks - %group is a way to do that.
 
@@ -511,11 +515,131 @@ int veryBoringFunction(char *aString);
 }
 ```
 
-# Part 11: UIKit Basics
+# Part 12: Creating Unsigncuts
+
+We will now be recreating Unsigncuts, an Objective-C tweak that allows unsigned shortcut files to be supported. If you don't know what that is, don't worry - STILL listen, because this chapter is important, as it will be your first introduction to using a dissassembler for RE, which will be incredibly helpful for understanding how stuff works behind the scenes, and is a must-have for tweak dev.
+
+So, as I explained in the Creating Pastcuts tutorial, one of the backbones to Shortcuts is `WorkflowKit.framework`. When we import an unsigned shortcut on iOS 15+, you'll get this warning: "Importing unsigned shortcut files is not supported. Please use another sharing option.". But what *could* be this, exactly? We're going to use a dissassembler to find out. I'm going to be using hopper - don't worry about paying, I'm using the trial version as well, lol.
+
+So, take the WorkflowKit binary from `/System/Library/PrivateFrameworks/WorkflowKit.framework`. If you don't see it, it's in dyld shared cache. Extract the dyld shared cache (I'll provide an explanation for how to do so later) actually since I'm lazy just go to [https://headers.cynder.me](https://headers.cynder.me) and download the binary. Open Hopper disassembler, and drag and drop it into Hopper.
+
+[Image]
+
+Tap on "Str" for strings in the binary. Now, let's search: "Importing unsigned shortcut files " and we get the string. Tap on it to go to it.
+
+[Image]
+
+Scroll to the right, and find `DATA XREF=cfstring_Importing_unsigned_shortcut_files...`. DATA XREF= is where this string is referenced.
+
+[Image]
+
+Double click on `cfstring_Importing_unsigned_shortcut_files_is_not_supported__Please_use_another_sharing_option_`.
+
+[Image]
+
+This takes us to a new location in the binary. Now, scroll to the right again, and you'll see `DATA XREF=+[WFSharingSettings shortcutFileSharingDisabledError]+64`. Jackpot! This string seems to be associated with this error method. Now, on the section with Labels, Proc, Str, the star and dot, tap back on `Labels` and search for `shortcutFileSh`. You'll get three labels all named `aShortcutfilesh`... just tap on one until you get to `shortcutFileSharingDisabledError`. Scroll to the right again - I see three things this is used in: `DATA XREF=+[WFSharingSettings shortcutFileSharingDisabledAlert]+24, -[WFShortcutExtractor extractWorkflowFile:completion:]+304, 0x5c69d8`. Woah, `-[WFShortcutExtractor extractWorkflowFile:completion:]` - that sounds interesting and it could be related to importing. Lets double click on that.
+
+[Image]
+
+Ok, so up until this point, you have had a top layer with some options, one of the top layer buttons says `mov add` - this means you're seeing the assembly of this method. However, Hopper has a pretty decent Objective-C decompiler that we can use. We don't need to worry about knowing assembly right now, the main purpose of this section is to introduce you to using disassembler tools, not assembly, so we're going to use the Objective-C decompiler. Tap on the button that says `if(b) f(x);`.
+
+[Image]
+
+We now have an accurate depiction of the function's code, in a (somewhat) understandable fashion to us! Yippe! Let's look at this snippet of code from this function:
+
+```objc
+//...
+r21 = arg0;
+//...
+//the real meat is below vvvv
+if ((VCIsInternalBuild() != 0x0) && ([WFSharingSettings shortcutFileSharingEnabled] != 0x0)) {
+            r0 = [r21 suggestedName];
+            r29 = r29;
+            r0 = [r0 retain];
+            r22 = r0;
+            if (r0 != 0x0) {
+                    [r21 extractWorkflowFile:r19 shortcutName:r22 shortcutFileContentType:0x0 iCloudIdentifier:0x0 completion:r20];
+            }
+            else {
+                    r23 = [[r19 wfName] retain];
+                    [r21 extractWorkflowFile:r19 shortcutName:r23 shortcutFileContentType:0x0 iCloudIdentifier:0x0 completion:r20];
+                    [r23 release];
+            }
+    }
+    else {
+            if (([r21 allowsOldFormatFile] & 0x1) != 0x0) {
+                    r0 = [r21 suggestedName];
+                    r29 = r29;
+                    r0 = [r0 retain];
+                    r22 = r0;
+                    if (r0 != 0x0) {
+                            [r21 extractWorkflowFile:r19 shortcutName:r22 shortcutFileContentType:0x0 iCloudIdentifier:0x0 completion:r20];
+                    }
+                    else {
+                            r23 = [[r19 wfName] retain];
+                            [r21 extractWorkflowFile:r19 shortcutName:r23 shortcutFileContentType:0x0 iCloudIdentifier:0x0 completion:r20];
+                            [r23 release];
+                    }
+            }
+            else {
+                    r22 = [[WFSharingSettings shortcutFileSharingDisabledError] retain];
+                    (*(r20 + 0x10))(r20, 0x0, r22);
+            }
+    }
+```
+
+Ok, so, it seems like the ability to import unsigned shortcut files is still there, but just locked away by this function. This function checks if `[WFSharingSettings shortcutFileSharingEnabled]` returns true (the old way to enable shortcut file importing on iOS 14-), however also needs VCIsInternalBuild() function from VoiceShortcutsClient.framework to return true as well. If this isn't the case - [r21 allowsOldFormatFile]. r21, as we can see be the above `r21 = arg0`, is `arg0` according to Hopper's Objective-C decompiler. However, this arg0 isn't actually the args passed into the method, rather instead, it's actually `self` instead. So `if (([r21 allowsOldFormatFile] & 0x1) != 0x0) {` is actually `if ([self allowsOldFormatFile]) {`. Normally, this is false, and [WFSharingSettings shortcutFileSharingDisabledError] will be called. However, let's look at our headers:
+
+```objc
+@interface WFShortcutExtractor : NSObject
+@property (readonly, nonatomic) BOOL allowsOldFormatFile;
+@property (readonly, nonatomic) WFFileRepresentation *extractingFile;
+@property (readonly, nonatomic) NSURL *extractingURL;
+@property (readonly, nonatomic) NSInteger fileAdoptionOptions;
+@property (readonly, nonatomic) BOOL skipsMaliciousScanning;
+@property (readonly, copy, nonatomic) NSString *sourceApplication;
+@property (readonly, copy, nonatomic) NSString *suggestedName;
++(BOOL)isShortcutFileType:(WFFileType *)fileType;
+-(BOOL)allowsOldFormatFile;
+-(BOOL)skipsMaliciousScanning;
+-(id)initWithFile:(WFFileRepresentation *)file allowsOldFormatFile:(BOOL)allowOldFileFormat skipsMaliciousScanning:(BOOL)skipScanning suggestedName:(NSString *)suggestName sourceApplication:(NSString *)app;
+-(id)initWithFile:(WFFileRepresentation *)file allowsOldFormatFile:(BOOL)allowOldFileFormat suggestedName:(NSString *)suggestName sourceApplication:(NSString *)app;
+-(id)initWithFile:(WFFileRepresentation *)file suggestedName:(NSString *)suggestName sourceApplication:(NSString *)app;
+-(id)initWithURL:(NSURL *)url allowsOldFormatFile:(BOOL)allowOldFileFormat fileAdoptionOptions:(NSInteger)options suggestedName:(NSString *)suggestName sourceApplication:(NSString *)app;
+-(id)initWithURL:(NSURL *)url allowsOldFormatFile:(BOOL)allowOldFileFormat skipsMaliciousScanning:(BOOL)skipScanning fileAdoptionOptions:(NSInteger)options suggestedName:(NSString *)suggestName sourceApplication:(NSString *)app;
+-(id)initWithURL:(NSURL *)url allowsOldFormatFile:(BOOL)allowOldFileFormat skipsMaliciousScanning:(BOOL)skipScanning suggestedName:(NSString *)suggestName sourceApplication:(NSString *)app;
+-(id)initWithURL:(NSURL *)url allowsOldFormatFile:(BOOL)allowOldFileFormat suggestedName:(NSString *)suggestName sourceApplication:(NSString *)app;
+-(id)initWithURL:(NSURL *)url fileAdoptionOptions:(NSInteger)options suggestedName:(NSString *)suggestName sourceApplication:(NSString *)app;
+-(id)initWithURL:(NSURL *)url suggestedName:(NSString *)suggestName sourceApplication:(NSString *)app;
+-(void)extractRemoteShortcutFileAtURL:(id)shortcutFileURL completion:(id)completion;
+-(void)extractShortcutFile:(WFFileRepresentation*)shortcutFile completion:(id)completion;
+-(void)extractShortcutWithCompletion:(id)completion;
+-(void)extractSignedShortcutFile:(WFFileRepresentation*)shortcutFile allowsRetryIfExpired:(BOOL)allowRetry completion:(id)completion;
+-(void)extractSignedShortcutFile:(WFFileRepresentation*)shortcutFile completion:(id)completion;
+-(void)extractWorkflowFile:(WFFileRepresentation*)shortcutFile completion:(id)completion;
+-(void)extractWorkflowFile:(WFFileRepresentation*)shortcutFile shortcutName:(NSString *)name shortcutFileContentType:(NSInteger)shortcutType iCloudIdentifier:(id)shortcutIdentifier completion:(id)completion;
+@end
+```
+
+So in other words, `allowsOldFormatFile` is just a BOOL property of WFShortcutExtractor. If we hook it, this function will allow us to import unsigned shortcut files~! Yippie!
+
+It's pretty straightforward from here, you can probably guess what to do at this point.
+
+```objc
+%hook WFShortcutExtractor
+-(BOOL)allowsOldFormatFile {
+ return YES;
+}
+%end
+```
+
+This was our first guide to using a disassembler! Yay! Now you won't have to just guess what methods do what now, RE will allow you to figure out what some stuff does with much less trial and error, insanely a must-have for tweak-dev. You will be applying this skill a lot, and I mean a lot.
+
+# Part 13: UIKit Basics
 
 //cover some basics of uikit here, show examples of gesture recognizers, adding subviews to uiviews, and presenting view controllers.  not gonna explain everything obv and explain why learning here prob won't do you much good but link to good resources
 
-# Part 12: Structure of the filesystem
+# Part 14: Structure of the filesystem
 
 Let's get Filza or Santander, and go to our root directory, `/`.
 
@@ -534,19 +658,19 @@ Some important directories for SystemFS:
 //maybe split into multiple parts
 //What's happening in our iPhone's terminal? - roughly touch the surface of binaries being in /usr/bin and /usr/local/bin and touch a little on sh
 
-# Part 13: Substrate APIs and ObjC-API
+# Part 15: Substrate APIs and ObjC-API
 
 Ever wondered how Objective-C works behind the scenes?
 
 //finish latr
 
-# Part 14: Who needs Logos anyways?
+# Part 16: Who needs Logos anyways?
 
 //explain TweakWithoutLogos and TweakWithoutTheos
 
-# Part 15: Finding Headers / Basic Reverse Engineering
+# Part 17: Finding Headers / Basic Reverse Engineering
 
-# Part 16: What's a bootstrap?
+# Part 18: What's a bootstrap?
 
 //I'm prob never going to finish this lol
 
