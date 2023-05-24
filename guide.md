@@ -189,7 +189,7 @@ int main(void) {
 Here's that, but using NSLog instead from Objective C:
 
 ```c
-#include <Foundation.h>
+#include <Foundation/Foundation.h>
 
 int main(void) {
  NSLog(@"Hello World");
@@ -224,7 +224,7 @@ What are we passing into the NSLog function, `@"Hello World"` is a NSString obje
 Here's us using the class in a program:
 
 ```objc
-#include <Foundation.h>
+#include <Foundation/Foundation.h>
 
 @interface OurOwnClass : NSObject {
  int ourIvar; //an instance variable
@@ -274,7 +274,7 @@ You'll see @property(nonatomic, readwrite) int ourProperty - this will autogen f
 What's a setter/getter? Well, we may want to access the ivar's value and change it. Setters/getters do exactly that. A getter will be autogen'd for us if we don't declare our custom one. We aren't declaring this property as readonly, so a setter will also be autogen'd for us if we don't declare our custom one. Here's the same thing, but instead of @property(nonatomic, readwrite) int ourProperty do the work for us, we're using our own getter/setter for our ivar:
 
 ```objc
-#include <Foundation.h>
+#include <Foundation/Foundation.h>
 
 @interface OurOwnClass : NSObject {
  int ourIvar; //an instance variable
