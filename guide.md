@@ -93,6 +93,19 @@ Well, SBDockView, SBFloatingDockView, and SBFloatingDockPlatterView are all obje
 ```
 What we're doing here is overriding SBDockView's method for setting the hidden property, setHidden:, with our custom code, that being `%orig(YES)`. %orig() is a Logos preprocessor directive, and using it in a void method will run the original code of the void method, ex, if we wanted to hook these but still have exactly the same behavior for whatever reason, we would have done `%orig(arg0)`, running the original method's code with it's original arg0 passed into it. Instead, though, we do %orig(YES) - this means that instead, we run the original method but always pass YES as an argument to it. In other words, forcing hidden to be true. SBDockView is what some iPhones use (ex I know notchless devices use this class), but (I think notched devices) and iPads use SBFloatingDockView, so we want to also hook that as well. SBFloatingDockPlatterView, I'm going to be honest, I forget what is used for, but I saw it in my source for AnotherLazyHideDockTweak, so I'm assuming it's used on some devices so we're hooking that as well. Now, `make package`, and our tweak's deb is made! Woo!
 
+That was a bit much admittedly, so here's some more examples of me trying to explain what we just did. Imagine this is code for SpringBoard itself so we can get a better understanding of what we're hooking:
+
+```objc
+SBDockView *dockView = [[SBDockView alloc]init];
+/* SpringBoard has allocated the dock view */
+/* now, we should set it as non-hidden! */
+[dockView setHidden:NO];
+/* that setHidden method means that the SBDockView will show! unless someone makes a tweak to change it to be YES, but it's not like that would happen! */
+%end
+```
+
+Basically, when SpringBoard calls the setHidden method, our tweak forces it to be YES. This, in turn, hides the SBDockView.
+
 # Part 5: Into our deb
 
 You'll notice it outputted a deb file. What is it? Well, let's just use a standard unarchiver tool to extract the contents of the .deb - you'll see `control`, `data`, and `debian-binary` (note: control/data may be .tar.xz / .tar.lzms, extract them again). The control contains our control file of our tweak, the data file though, outputs a folder. Depending on what version of theos you will be doing this on and the time it may be different, but you may get var > jb > usr > lib > TweakInject > (files) / Library > MobileSubstrate > DynamicLibraries (files). These files, you'll see a dylib, as well as the plist that we saw was created. Basically, the deb installs the `data` part to your device - ex you may have var/jb/usr/lib/TweakInject as to where your tweaks are stored or /usr/lib/TweakInject or /Library/MobileSubstrate/DynamicLibraries (just a symlink to formerly mentioned path iirc). The deb places those files there. Your dylib is your actual tweak, and the plist specifies the bundle id of the process to inject your dylib into.
@@ -142,7 +155,7 @@ Shortcuts on iOS 13+ differs greatly behind the scenes from iOS 12-, with a lot 
 
 Well, this actually honestly wasn't how I created it. Remember how I said I was a dumb kid doing random Flex 3? Yeah, admittedly that's just what I did: edit random Flex 3 stuff until I saw it worked. This is why older Pastcuts versions not only hook WFWorkflowRecord minimumClientVersion (the one thing that makes Pastcuts 1.0 word), but also WFWorkflowReference minimumClientVersion, which is unneeded, as well as some other random stuff that had methods that sounded related to importing with as isSupportedOnThisDevice, which isn't related to importing at *all* and is completely unneeded.
 
-I really recommend learning some basic RE when making tweaks rather than just hooking random headers and hoping for the best. Chapter 14 of this book / Part 14 of this PDF will go over some basics.
+I really recommend learning some basic RE when making tweaks rather than just hooking random headers and hoping for the best. Chapter 14 of this book / Part 14 of this PDF will go over some basics. However, playing around and hooking random headers when you start *can* be a good way to get more familiar with tweaks, as long as you of course don't accidentally hook something dangerous (ex, if you see a method called "deleteAllData", then maybe that isn't a good idea to hook...).
 
 Here's all that's needed to recreate Pastcuts 1.0:
 
@@ -153,23 +166,43 @@ Here's all that's needed to recreate Pastcuts 1.0:
 }
 %end
 ```
+(Inside of `Tweak.xm`/`Tweak.x`.)
 
 Now, make our plist affect com.apple.shortcuts (Shortcuts's bundle id) as well as com.apple.WorkflowKit (WorkflowKit's bundle id).
-
+```plist
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Filter</key>
+	<dict>
+		<key>Bundles</key>
+		<array>
+			<string>com.apple.WorkflowKit</string>
+			<string>com.apple.shortcuts</string>
+		</array>
+	</dict>
+</dict>
+</plist>
+```
+(Inside of `Pastcuts.plist`.)
 
 Okay, so, what's wrong here? Well, in 1.2 I wanted Pastcuts to convert shortcut actions when importing. I realized that my logic was bad. Why? Well, we're hooking minimumClientVersion in EVERY shortcut loaded. This might be bad for performance / battery, and while we're not doing anything that can go wrong that much, once we get to hooking actions, if we make one mistake, not just that shortcut gets affected but EVERY shortcut gets affected, so it's pretty dangerous as well.
 
 I still wasn't that experienced with RE, but I had improved by Obj-C skills a bit by this point - instead of RE, I instead just plopped in a NSLog, looked at console, and saw how many times it was called and was like, "okay, this definitely is called too much". I still didn't know RE so I just messed with random classes Flex 3 showed, and found WFSharedShortcut. After trying an NSLog with a hook *this* time, I saw that it seems to not be called when loading shortcuts, only when importing. So I decided that WFSharedShortcut was a much better option for this than WFWorkflowRecord. Current Pastcuts, 1.3.0, still actually uses WFSharedShortcut, fun fact, and some other tweaks of mine such as Safecuts, which mitigates an iOS 15.0-15.3.1 hidden action vuln also use it (although I should really switch to using WFShortcutExporter for Safecuts - it's brand new to iOS 15, and if you're doing iOS 15, it's more better suited for this type of stuff). I would still recommend doing, uh, good RE and understanding exactly how WFSharedShortcut works, but at the time this was all I knew and I guess it's better than nothing.
 
 
-So, let's just switch to hooking (also in WorkflowKit) WFSharedShortcut's workflowRecord instead. Let's do `id rettype = %orig;`, %orig will return what the getter method would have originall returned (aka the unmodified WFWorkflowRecord). Then, `[rettype setMinimumClientVersion:@"1"];` to set minimumClientVersion to be a NSString being @"1". Then just return rettype (our modified WFWorkflowRecord), and boom, now we only hook when a shortcut is imported, making us MUCH more optimized! I was planning on waiting for Pastcuts 1.2, but I decided this optimization is enough to deserve a quick 1.1.2 release.
+So, let's just switch to hooking (also in WorkflowKit) WFSharedShortcut's workflowRecord instead. Let's do `WFWorkflowRecord *workflowRecord = %orig;`, %orig will return what the getter method would have originall returned (aka the unmodified WFWorkflowRecord). Then, `[workflowRecord setMinimumClientVersion:@"1"];` to set minimumClientVersion to be a NSString being @"1". Then just return workflowRecord (our modified WFWorkflowRecord), and boom, now we only hook when a shortcut is imported, making us MUCH more optimized! I was planning on waiting for Pastcuts 1.2, but I decided this optimization is enough to deserve a quick 1.1.2 release.
 
 ```objc
 %hook WFSharedShortcut
--(id)workflowRecord {
-  id rettype = %orig;
-  [rettype setMinimumClientVersion:@"1"];
-  return rettype;
+-(WFWorkflowRecord *)workflowRecord {
+  WFWorkflowRecord *workflowRecord = %orig;
+  /* workflowRecord is what this getter would have returned originally */
+  /* so, lets set minimumClientVersion to 1 */
+  [workflowRecord setMinimumClientVersion:@"1"];
+  /* and then, returned our modified workflowRecord */
+  return workflowRecord;
 }
 %end
 ```
@@ -183,6 +216,7 @@ Here, a simple Hello World program in C:
 
 int main(void) {
  printf("Hello World\n");
+ return 0;
 }
 ```
 
@@ -193,6 +227,7 @@ Here's that, but using NSLog instead from Objective C:
 
 int main(void) {
  NSLog(@"Hello World");
+ return 0;
 }
 ```
 
@@ -265,7 +300,7 @@ int main(void) {
 
 Lemme explain:
 
-So, we have a class, OurOwnClass. Classes aren't objects. We are creating a new object, thisIsAnObject, that's type is OurOwnClass. In other words, we're creating an instance of our OurOwnClass class, and thisIsAnObject is a pointer to that.
+So, we have a class, OurOwnClass. Classes aren't objects, but rather they define what our objects do. We are creating a new object, thisIsAnObject, that's type is OurOwnClass. In other words, we're creating an instance of our OurOwnClass class, and thisIsAnObject is a pointer to that.
 
 So, an instance variable, or ivar for short, are variables for our object thisIsAnObject, but are private to it - aka every object we make from OurOwnClass will have its own ourIvar.
 
@@ -425,12 +460,14 @@ If so, I create a mutable copy of the action to modify it. Then I change the `WF
 
 Here's an example of this:
 
+TODO: The code shown here is absolutely horrible, remember to rewrite it...
+
 ```objc
 %hook WFSharedShortcut
 -(id)workflowRecord {
-  id rettype = %orig; //the original wfworkflowrecord that would have returned
-  [rettype setMinimumClientVersion:@"1"];
-  NSArray *origShortcutActions = (NSArray *)[rettype actions];
+  id workflowRecord = %orig; //the original wfworkflowrecord that would have returned
+  [workflowRecord setMinimumClientVersion:@"1"];
+  NSArray *origShortcutActions = (NSArray *)[workflowRecord actions];
   NSMutableArray *newMutableShortcutActions = [origShortcutActions mutableCopy]; //what is going to be our new actions
   int shortcutActionsObjectIndex = 0;
   for (id shortcutActionsObject in origShortcutActions) {
@@ -440,7 +477,7 @@ Here's an example of this:
         NSMutableDictionary *mutableShortcutActionsObject = [shortcutActionsObject mutableCopy];
 
         [mutableShortcutActionsObject setObject:@"is.workflow.actions.exit" forKey:@"WFWorkflowActionIdentifier"];
-        if ([[[[[mutableShortcutActionsObject objectForKey:@"WFWorkflowActionParameters"] objectForKey:@"WFOutput"] objectForKey:@"Value"] objectForKey:@"attachmentsByRange"] objectForKey:@"{0, 1}"]) {
+        if ([[[[mutableShortcutActionsObject objectForKey:@"WFWorkflowActionParameters"] objectForKey:@"WFOutput"] objectForKey:@"Value"] objectForKey:@"attachmentsByRange"] objectForKey:@"{0, 1}"]) {
     //in iOS 15, if an Exit action has output it's converted into the Output action, so we convert it back
 
           NSDictionary *actionParametersWFResult = [[NSDictionary alloc] initWithObjectsAndKeys:@"placeholder", @"Value", @"WFTextTokenAttachment", @"WFSerializationType", nil];
